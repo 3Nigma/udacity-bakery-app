@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+
+/**
+ * Check environment before continuing
+ */
+if (process.env.UDACITY_BAKING_URL === undefined) {
+  console.error('The UDACITY_BAKING_URL has not been set. Please provide an original Json URL source for the recipes before continuing.')
+  process.exit(-1);
+}
+if (process.env.GOOGLE_CSE_ID === undefined) {
+    console.warn('GOOGLE_CSE_ID was not defined. To use google images for the recipes which have none, this field must be set.\n' +
+        'Please go to https://goo.gl/pb6u2I , follow the setup steps and define the expected environmental variables before ' +
+        'starting the backend.');
+}
+if (process.env.GOOGLE_API_KEY === undefined) {
+    console.warn('GOOGLE_API_KEY was not defined. To use google images for the recipes which have none, this field must be set.\n' +
+        'Please go to https://goo.gl/pb6u2I , follow the setup steps and define the expected environmental variables before ' +
+        'starting the backend.');
+}
+
+/**
+ * Module dependencies.
+ */
+const app = require('../app');
+const debug = require('debug')('udacity-backing-backend:server');
+const http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+const port = normalizePort(process.env.PORT || '3000');  app.set('port', port);
+const server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+  const port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+function onListening() {
+  const addr = server.address();
+    const bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

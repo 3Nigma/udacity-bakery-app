@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Baking Time</string>
+
+    <plurals name="list_recipe_ingredients_format">
+        <item quantity="one">%d ingredient</item>
+        <item quantity="other">%d ingredients</item>
+    </plurals>
+    <plurals name="list_recipe_steps_format">
+        <item quantity="one">%d step</item>
+        <item quantity="other">%d steps</item>
+    </plurals>
+    <plurals name="list_recipe_servings_format">
+        <item quantity="one">%d serving</item>
+        <item quantity="other">%d servings</item>
+    </plurals>
+
+    <string name="recipe_ingredients_label">Ingredients</string>
+    <string name="recipe_steps_label">Steps</string>
+    <string name="recipe_step_activity_title_format" formatted="false">%s - step %d/%d</string>
+    <string name="recipe_step_activity_description">Description</string>
+
+    <string name="title_item_detail">xxx</string>
+</resources>

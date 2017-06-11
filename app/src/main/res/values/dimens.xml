@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="app_bar_height">200dp</dimen>
+    <dimen name="recipe_card_height">200dp</dimen>
+    <dimen name="recipe_card_pic_feature_size">18dp</dimen>
+
+    <dimen name="recipe_detail_item_height">48dp</dimen>
+
+    <dimen name="recipe_step_player_height">220dp</dimen>
+
+    <dimen name="text_margin">16dp</dimen>
+    <dimen name="widget_margin">8dp</dimen>
+</resources>

@@ -1,0 +1,19 @@
+{
+  "name": "udacity-backing-backend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "async": "^2.4.1",
+    "body-parser": "~1.17.1",
+    "debug": "~2.6.3",
+    "express": "~4.15.2",
+    "google-images": "^2.1.0",
+    "jade": "~1.11.0",
+    "moment": "^2.18.1",
+    "morgan": "~1.8.1",
+    "request": "^2.81.0"
+  }
+}
