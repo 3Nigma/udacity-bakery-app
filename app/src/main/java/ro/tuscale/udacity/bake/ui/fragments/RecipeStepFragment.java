@@ -1,43 +1,47 @@
 package ro.tuscale.udacity.bake.ui.fragments;
 
-import android.app.Activity;
 import android.arch.lifecycle.ViewModelProviders;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
+import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
 import io.reactivex.functions.Consumer;
 import ro.tuscale.udacity.bake.R;
+import ro.tuscale.udacity.bake.Utils;
 import ro.tuscale.udacity.bake.models.Recipe;
 import ro.tuscale.udacity.bake.models.RecipeRepository;
 import ro.tuscale.udacity.bake.models.RecipeStep;
-import ro.tuscale.udacity.bake.player.ComponentListener;
 
-public class RecipeStepFragment extends Fragment {
+public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListener {
     private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
 
     public static final String ARG_RECIPE_ID = "recipe_id";
@@ -45,6 +49,7 @@ public class RecipeStepFragment extends Fragment {
     public static final String ARG_MAX_STEP_ID = "max_step_id";
 
     private SimpleExoPlayerView mPlayerView;
+    private ImageView mStepThumbnailImage;
     private TextView mStepDescription;
     private ImageButton mBtNavigateBack;
     private ImageButton mBtNavigateForward;
@@ -55,7 +60,6 @@ public class RecipeStepFragment extends Fragment {
     private RecipeStep mStep;
 
     private SimpleExoPlayer mPlayer;
-    private ComponentListener mComponentListener;
     private long mPlaybackPosition;
     private int mCurrentWindow;
 
@@ -69,7 +73,6 @@ public class RecipeStepFragment extends Fragment {
 
         Bundle fragmentStartupArguments = getArguments();
 
-        this.mComponentListener = new ComponentListener();
         if (fragmentStartupArguments.containsKey(ARG_RECIPE_ID) &&
                 fragmentStartupArguments.containsKey(ARG_STEP_ID) &&
                 fragmentStartupArguments.containsKey(ARG_MAX_STEP_ID)) {
@@ -88,6 +91,7 @@ public class RecipeStepFragment extends Fragment {
 
         // View binding. Can't use ButterKnife because of different layouts used for this fragment
         mPlayerView = rootView.findViewById(R.id.recipe_step_video);
+        mStepThumbnailImage = rootView.findViewById(R.id.recipe_step_thumbnail);
         mStepDescription = rootView.findViewById(R.id.txt_recipe_step_description);
         mBtNavigateBack = rootView.findViewById(R.id.ibt_recipe_step_nav_back);
         mBtNavigateForward = rootView.findViewById(R.id.ibt_recipe_step_nav_forward);
@@ -100,8 +104,6 @@ public class RecipeStepFragment extends Fragment {
             mBtNavigateBack.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    boolean willBackwardStillBePossible = (mStepId > 1);
-
                     mPlayer.stop();
                     if (mStepId > 0) {
                         mBtNavigateBack.setEnabled(mStepId - 1 != 0);
@@ -175,31 +177,54 @@ public class RecipeStepFragment extends Fragment {
     private void loadStep(int recipeId, final int stepId) {
         RecipeRepository recipeRepository = ViewModelProviders.of(this).get(RecipeRepository.class);
 
-        recipeRepository.getById(recipeId)
-                .subscribe(new Consumer<Recipe>() {
-                    @Override
-                    public void accept(Recipe recipe) throws Exception {
-                        Uri stepVideoUri;
+        if (Utils.isInternetConnected()) {
+            recipeRepository.getById(recipeId)
+                    .subscribe(new Consumer<Recipe>() {
+                        @Override
+                        public void accept(Recipe recipe) throws Exception {
+                            Uri stepVideoUri;
+                            String stepThumbnailAddress;
 
-                        mStepId = stepId;
-                        mStep = recipe.getStepById(stepId);
-                        stepVideoUri = mStep.getVideoUri();
+                            mStepId = stepId;
+                            mStep = recipe.getStepById(stepId);
+                            stepVideoUri = mStep.getVideoUri();
+                            stepThumbnailAddress = mStep.getThumbnailAddress();
 
-                        if (stepVideoUri.getScheme() != null) {
-                            MediaSource mediaSource = buildMediaSource(stepVideoUri);
+                            // Prepare the holder and load the thumbnail (if available) while waiting for the movie to buffer
+                            mPlayerView.setVisibility(View.GONE);
+                            mStepThumbnailImage.setVisibility(View.VISIBLE);
+                            if (stepThumbnailAddress.isEmpty() == false) {
+                                Utils.getPicasso(getActivity())
+                                        .load(stepThumbnailAddress)
+                                        .placeholder(R.drawable.recipe_list_loading_placeholder).fit()
+                                        .into(mStepThumbnailImage);
+                            } else {
+                                // default to loading until proven otherwise
+                                mStepThumbnailImage.setImageResource(R.drawable.recipe_list_loading_placeholder);
+                            }
 
-                            if (mPlayer != null) {
-                                mPlayer.prepare(mediaSource, true, false);
+                            // Buffer the video and go
+                            if (stepVideoUri.getScheme() != null) {
+                                MediaSource mediaSource = buildMediaSource(stepVideoUri);
+
+                                if (mPlayer != null) {
+                                    mPlayer.prepare(mediaSource, true, false);
+                                }
+                            } else {
+                                // No video available. Default to broken image thumbnail
+                                mStepThumbnailImage.setImageResource(R.drawable.ic_broken_image_white_24dp);
+                            }
+
+                            // Update title & other stuff
+                            getActivity().setTitle(getString(R.string.recipe_step_activity_title_format, recipe.getName(), mStepId + 1, mMaxStepId + 1));
+                            if (mStepDescription != null) {
+                                mStepDescription.setText(mStep.getDescription());
                             }
                         }
-
-                        // Update title & other stuff
-                        getActivity().setTitle(getString(R.string.recipe_step_activity_title_format, recipe.getName(), mStepId + 1, mMaxStepId + 1));
-                        if (mStepDescription != null) {
-                            mStepDescription.setText(mStep.getDescription());
-                        }
-                    }
-                });
+                    });
+        } else {
+            Toast.makeText(getActivity(), R.string.no_internet_body, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void initializePlayer() {
@@ -209,10 +234,8 @@ public class RecipeStepFragment extends Fragment {
             // using a DefaultTrackSelector with an adaptive video selection factory
             mPlayer = ExoPlayerFactory.newSimpleInstance(new DefaultRenderersFactory(getContext()),
                     new DefaultTrackSelector(adaptiveTrackSelectionFactory), new DefaultLoadControl());
-            mPlayer.addListener(mComponentListener);
-            mPlayer.setVideoDebugListener(mComponentListener);
-            mPlayer.setAudioDebugListener(mComponentListener);
-            mPlayer.setPlayWhenReady(true);
+            mPlayer.addListener(this);
+            mPlayer.setPlayWhenReady(false);
             mPlayer.seekTo(mCurrentWindow, mPlaybackPosition);
 
             // Tie media controller to session
@@ -224,7 +247,7 @@ public class RecipeStepFragment extends Fragment {
         if (mPlayer != null) {
             mPlaybackPosition = mPlayer.getCurrentPosition();
             mCurrentWindow = mPlayer.getCurrentWindowIndex();
-            mPlayer.removeListener(mComponentListener);
+            mPlayer.removeListener(this);
             mPlayer.setVideoListener(null);
             mPlayer.setVideoDebugListener(null);
             mPlayer.setAudioDebugListener(null);
@@ -238,5 +261,59 @@ public class RecipeStepFragment extends Fragment {
         DefaultExtractorsFactory mediaDatasourceFactory = new DefaultExtractorsFactory();
 
         return new ExtractorMediaSource(uri, dataSourceFactory, mediaDatasourceFactory, null, null);
+    }
+
+    @Override
+    public void onTimelineChanged(Timeline timeline, Object manifest) {
+        // No-op
+    }
+
+    @Override
+    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
+        // No-op
+    }
+
+    @Override
+    public void onLoadingChanged(boolean isLoading) {
+        // No-op
+    }
+
+    @Override
+    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+        switch (playbackState) {
+            case ExoPlayer.STATE_IDLE:
+                // No-op
+                break;
+            case ExoPlayer.STATE_BUFFERING:
+                // No-op
+                break;
+            case ExoPlayer.STATE_READY:
+                // We are ready. Switching thumbnail with actual thing
+                mPlayerView.setVisibility(View.VISIBLE);
+                mStepThumbnailImage.setVisibility(View.GONE);
+                break;
+            case ExoPlayer.STATE_ENDED:
+                // Reset the player
+                mPlayer.seekTo(0);
+                break;
+            default:
+                // No-op
+                break;
+        }
+    }
+
+    @Override
+    public void onPlayerError(ExoPlaybackException error) {
+        // No-op
+    }
+
+    @Override
+    public void onPositionDiscontinuity() {
+        // No-op
+    }
+
+    @Override
+    public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
+        // No-op
     }
 }

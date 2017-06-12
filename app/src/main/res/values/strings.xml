@@ -19,5 +19,6 @@
     <string name="recipe_step_activity_title_format" formatted="false">%s - step %d/%d</string>
     <string name="recipe_step_activity_description">Description</string>
 
-    <string name="title_item_detail">xxx</string>
+    <string name="no_internet_title">No internet!</string>
+    <string name="no_internet_body">Check your network connection and try again.</string>
 </resources>

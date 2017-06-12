@@ -33,6 +33,7 @@
         android:clipChildren="true"
         android:padding="16dp"
         android:textIsSelectable="true"
+        android:visibility="visible"
         tools:context="ro.tuscale.udacity.bake.ui.fragments.RecipeDetailFragment" />
 
     <TextView
@@ -42,7 +43,8 @@
         android:gravity="center_vertical"
         android:text="@string/recipe_steps_label"
         android:textAppearance="@android:style/TextAppearance.Material.Medium"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:visibility="visible" />
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recipe_detail_steps_list"
@@ -51,6 +53,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp"
         android:textIsSelectable="true"
+        android:visibility="visible"
         tools:context="ro.tuscale.udacity.bake.ui.fragments.RecipeDetailFragment" />
 
 </LinearLayout>

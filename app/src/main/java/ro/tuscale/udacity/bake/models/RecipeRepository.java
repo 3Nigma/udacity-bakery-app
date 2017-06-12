@@ -5,6 +5,7 @@ import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModel;
 import android.support.annotation.Nullable;
 
+import java.net.ConnectException;
 import java.util.List;
 
 import io.reactivex.Single;
@@ -13,12 +14,13 @@ import io.reactivex.SingleOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
-import retrofit2.http.Path;
-import retrofit2.http.Query;
 import ro.tuscale.udacity.bake.BuildConfig;
 
 /**
@@ -43,12 +45,15 @@ public class RecipeRepository extends ViewModel {
         this.mRecipes = new MutableLiveData<>();
 
         myService.getRecipes()
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<List<Recipe>>() {
+                .enqueue(new Callback<List<Recipe>>() {
                     @Override
-                    public void accept(List<Recipe> recipes) throws Exception {
-                        mRecipes.setValue(recipes);
+                    public void onResponse(Call<List<Recipe>> call, Response<List<Recipe>> response) {
+                        mRecipes.setValue(response.body());
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<Recipe>> call, Throwable t) {
+                        // No-op. Maybe log later
                     }
                 });
     }
@@ -95,6 +100,6 @@ public class RecipeRepository extends ViewModel {
 
     /* package */ interface MyService {
         @GET("recipes")
-        Single<List<Recipe>> getRecipes();
+        Call<List<Recipe>> getRecipes();
     }
 }

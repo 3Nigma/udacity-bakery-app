@@ -10,12 +10,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.widget.Toast;
 
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import ro.tuscale.udacity.bake.R;
+import ro.tuscale.udacity.bake.Utils;
 import ro.tuscale.udacity.bake.ui.adapters.RecipesAdapter;
 import ro.tuscale.udacity.bake.models.RecipeRepository;
 import ro.tuscale.udacity.bake.models.Recipe;
@@ -44,12 +46,16 @@ public class RecipeListActivity extends AppCompatActivity
         RecipeRepository restManager = ViewModelProviders.of(this).get(RecipeRepository.class);
 
         mRecipesAdapter = new RecipesAdapter(getApplicationContext(), this);
-        restManager.getAll().observe(this, new Observer<List<Recipe>>() {
-            @Override
-            public void onChanged(@Nullable List<Recipe> recipes) {
-                mRecipesAdapter.loadRecipes(recipes);
-            }
-        });
+        if (Utils.isInternetConnected()) {
+            restManager.getAll().observe(this, new Observer<List<Recipe>>() {
+                @Override
+                public void onChanged(@Nullable List<Recipe> recipes) {
+                    mRecipesAdapter.loadRecipes(recipes);
+                }
+            });
+        } else {
+            Toast.makeText(this, R.string.no_internet_body, Toast.LENGTH_SHORT).show();
+        }
         mRecipesList.setLayoutManager(new GridLayoutManager(this, getResources().getInteger(R.integer.recipe_list_col_count)));
         mRecipesList.setAdapter(mRecipesAdapter);
     }

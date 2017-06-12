@@ -10,11 +10,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import io.reactivex.functions.Consumer;
 import ro.tuscale.udacity.bake.R;
+import ro.tuscale.udacity.bake.Utils;
 import ro.tuscale.udacity.bake.models.Recipe;
 import ro.tuscale.udacity.bake.models.RecipeRepository;
 import ro.tuscale.udacity.bake.models.RecipeStep;
@@ -79,32 +81,36 @@ public class RecipeDetailFragment extends Fragment implements StepsAdapter.StepC
         mRecipeStepsList.setLayoutManager(new LinearLayoutManager(getContext()));
         mRecipeStepsList.setAdapter(mStepsAdapter);
 
-        recipeRepository.getById(mRecipeId)
-                .subscribe(new Consumer<Recipe>() {
-                    @Override
-                    public void accept(Recipe recipe) throws Exception {
-                        int recipeIngredients = recipe.getIngredientsCount();
-                        int recipeSteps = recipe.getRequiredStepsCount();
-                        int recipeServings = recipe.getServingsCount();
+        if (Utils.isInternetConnected()) {
+            recipeRepository.getById(mRecipeId)
+                    .subscribe(new Consumer<Recipe>() {
+                        @Override
+                        public void accept(Recipe recipe) throws Exception {
+                            int recipeIngredients = recipe.getIngredientsCount();
+                            int recipeSteps = recipe.getRequiredStepsCount();
+                            int recipeServings = recipe.getServingsCount();
 
-                        // Cache the result
-                        mRecipe = recipe;
+                            // Cache the result
+                            mRecipe = recipe;
 
-                        // Load the number region
-                        mRecipeIngredientsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_ingredients_format, recipeIngredients, recipeIngredients));
-                        mRecipeStepsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_steps_format, recipeSteps, recipeSteps));
-                        mRecipeServingsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_servings_format, recipeServings, recipeServings));
+                            // Load the number region
+                            mRecipeIngredientsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_ingredients_format, recipeIngredients, recipeIngredients));
+                            mRecipeStepsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_steps_format, recipeSteps, recipeSteps));
+                            mRecipeServingsCount.setText(getResources().getQuantityString(R.plurals.list_recipe_servings_format, recipeServings, recipeServings));
 
-                        // Load the ingredients and the steps
-                        mIngredientsAdapter.loadIngredientsFromRecipe(recipe);
-                        mStepsAdapter.loadStepsFromRecipe(recipe);
+                            // Load the ingredients and the steps
+                            mIngredientsAdapter.loadIngredientsFromRecipe(recipe);
+                            mStepsAdapter.loadStepsFromRecipe(recipe);
 
-                        Activity pActivity = getActivity();
-                        if (pActivity instanceof RecipeLoadedNotifier) {
-                            ((RecipeLoadedNotifier)pActivity).onRecipeLoaded(mRecipe);
+                            Activity pActivity = getActivity();
+                            if (pActivity instanceof RecipeLoadedNotifier) {
+                                ((RecipeLoadedNotifier)pActivity).onRecipeLoaded(mRecipe);
+                            }
                         }
-                    }
-                });
+                    });
+        } else {
+            Toast.makeText(getActivity(), R.string.no_internet_body, Toast.LENGTH_SHORT).show();
+        }
 
         return rootView;
     }

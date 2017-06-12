@@ -28,4 +28,7 @@ public class RecipeStep {
     public Uri getVideoUri() {
         return Uri.parse(mVideoUrl);
     }
+    public String getThumbnailAddress() {
+        return mThumbnailUrl;
+    }
 }

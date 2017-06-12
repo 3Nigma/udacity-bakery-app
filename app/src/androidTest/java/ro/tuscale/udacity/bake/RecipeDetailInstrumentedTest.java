@@ -4,43 +4,38 @@ import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.Observer;
 import android.content.Intent;
 import android.support.annotation.Nullable;
-import android.support.design.widget.CollapsingToolbarLayout;
-import android.support.test.espresso.Espresso;
+import android.support.test.espresso.action.ViewActions;
 import android.support.test.espresso.contrib.RecyclerViewActions;
 import android.support.test.espresso.intent.rule.IntentsTestRule;
-import android.support.test.espresso.matcher.BoundedMatcher;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.ConnectException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 import ro.tuscale.udacity.bake.models.Recipe;
 import ro.tuscale.udacity.bake.models.RecipeRepository;
 import ro.tuscale.udacity.bake.support.RecyclerViewItemCountAssertion;
 import ro.tuscale.udacity.bake.ui.activities.RecipeDetailActivity;
-import ro.tuscale.udacity.bake.ui.activities.RecipeListActivity;
 import ro.tuscale.udacity.bake.ui.activities.RecipeStepActivity;
 import ro.tuscale.udacity.bake.ui.fragments.RecipeDetailFragment;
 import ro.tuscale.udacity.bake.ui.fragments.RecipeStepFragment;
 
 import static android.support.test.espresso.Espresso.onView;
 import static android.support.test.espresso.action.ViewActions.click;
-import static android.support.test.espresso.assertion.ViewAssertions.matches;
+import static android.support.test.espresso.action.ViewActions.scrollTo;
 import static android.support.test.espresso.intent.Intents.intended;
 import static android.support.test.espresso.intent.matcher.BundleMatchers.hasEntry;
 import static android.support.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static android.support.test.espresso.intent.matcher.IntentMatchers.hasExtras;
-import static android.support.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static android.support.test.espresso.matcher.ViewMatchers.withId;
+import static android.support.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -53,23 +48,28 @@ public class RecipeDetailInstrumentedTest {
     private static Recipe mRecipe;
 
     @BeforeClass
-    public static void beforeAll() {
+    public static void beforeAll() throws ConnectException {
         RecipeRepository recipeRepository = new RecipeRepository();
-        final MutableLiveData<List<Recipe>> recipeSource = recipeRepository.getAll();
 
-        recipeSource.observeForever(new Observer<List<Recipe>>() {
-            @Override
-            public void onChanged(@Nullable List<Recipe> recipes) {
-                recipeSource.removeObserver(this);
+        if (Utils.isInternetConnected()) {
+            final MutableLiveData<List<Recipe>> recipeSource = recipeRepository.getAll();
 
-                for (Recipe recipe : recipes) {
-                    if (recipe.getId() == LOADED_RECIPE_ID) {
-                        mRecipe = recipe;
-                        break;
+            recipeSource.observeForever(new Observer<List<Recipe>>() {
+                @Override
+                public void onChanged(@Nullable List<Recipe> recipes) {
+                    recipeSource.removeObserver(this);
+
+                    for (Recipe recipe : recipes) {
+                        if (recipe.getId() == LOADED_RECIPE_ID) {
+                            mRecipe = recipe;
+                            break;
+                        }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            throw new ConnectException("No internet available.");
+        }
     }
 
     @Before
@@ -89,8 +89,9 @@ public class RecipeDetailInstrumentedTest {
 
     @Test
     public void checkTriggeringOfRecipeStep_onClick() throws Exception {
-        onView(withId(R.id.recipe_detail_steps_list))
-                .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
+        // Scroll all the way down to have the steps list in view before clicking the items
+        onView(withId(android.R.id.content)).perform(ViewActions.swipeUp());
+        onView(withId(R.id.recipe_detail_steps_list)).perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
 
         intended(
                 allOf(
