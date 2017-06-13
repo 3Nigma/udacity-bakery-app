@@ -5,6 +5,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -57,8 +58,12 @@ public class StepsAdapter extends RecyclerView.Adapter<StepsAdapter.ViewHolder> 
         return mSteps.size();
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    static class ViewHolder extends RecyclerView.ViewHolder
+            implements View.OnClickListener
+
+    {
         @BindView(R.id.txt_recipe_step_name) TextView mName;
+        @BindView(R.id.bt_recipe_step_play) ImageButton mPlayButton;
 
         private Recipe mRecipe;
         private RecipeStep mStep;
@@ -72,6 +77,10 @@ public class StepsAdapter extends RecyclerView.Adapter<StepsAdapter.ViewHolder> 
             this.mRecipe = recipe;
             this.mRootView = itemView;
             this.mStepClickHandler = clickHandler;
+
+            // Tie events
+            mRootView.setOnClickListener(this);
+            mPlayButton.setOnClickListener(this);
         }
 
         public void bind(@NonNull RecipeStep step) {
@@ -79,13 +88,11 @@ public class StepsAdapter extends RecyclerView.Adapter<StepsAdapter.ViewHolder> 
 
             mStep = step;
             mName.setText(String.format("%d. %s", stepNr, step.getShortDescription()));
+        }
 
-            mRootView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mStepClickHandler.onStepClicked(mRecipe, mStep);
-                }
-            });
+        @Override
+        public void onClick(View view) {
+            mStepClickHandler.onStepClicked(mRecipe, mStep);
         }
     }
 

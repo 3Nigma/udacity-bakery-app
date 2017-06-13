@@ -4,11 +4,15 @@ import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.Observer;
 import android.content.Intent;
 import android.support.annotation.Nullable;
+import android.support.test.espresso.Espresso;
+import android.support.test.espresso.IdlingResource;
 import android.support.test.espresso.action.ViewActions;
 import android.support.test.espresso.contrib.RecyclerViewActions;
 import android.support.test.espresso.intent.rule.IntentsTestRule;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
+
+import com.jakewharton.espresso.OkHttp3IdlingResource;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,7 +54,9 @@ public class RecipeDetailInstrumentedTest {
     @BeforeClass
     public static void beforeAll() throws ConnectException {
         RecipeRepository recipeRepository = new RecipeRepository();
+        final IdlingResource recipeIdlingResx = OkHttp3IdlingResource.create("OkHttp", recipeRepository.getHttpClient());
 
+        Espresso.registerIdlingResources(recipeIdlingResx);
         if (Utils.isInternetConnected()) {
             final MutableLiveData<List<Recipe>> recipeSource = recipeRepository.getAll();
 
@@ -65,6 +71,7 @@ public class RecipeDetailInstrumentedTest {
                             break;
                         }
                     }
+                    Espresso.unregisterIdlingResources(recipeIdlingResx);
                 }
             });
         } else {
@@ -79,11 +86,13 @@ public class RecipeDetailInstrumentedTest {
 
     @Test
     public void checkRecipeIngredientsCount() throws Exception {
+        Thread.sleep(2000);
         onView(withId(R.id.recipe_detail_ingredients_list)).check(new RecyclerViewItemCountAssertion(mRecipe.getIngredientsCount()));
     }
 
     @Test
     public void checkRecipeStepsCount() throws Exception {
+        Thread.sleep(2000);
         onView(withId(R.id.recipe_detail_steps_list)).check(new RecyclerViewItemCountAssertion(mRecipe.getRequiredStepsCount()));
     }
 
@@ -92,6 +101,7 @@ public class RecipeDetailInstrumentedTest {
         // Scroll all the way down to have the steps list in view before clicking the items
         onView(withId(android.R.id.content)).perform(ViewActions.swipeUp());
         onView(withId(R.id.recipe_detail_steps_list)).perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
+        Thread.sleep(500);
 
         intended(
                 allOf(

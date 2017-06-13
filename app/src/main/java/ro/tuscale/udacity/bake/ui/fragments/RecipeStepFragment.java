@@ -53,6 +53,7 @@ public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListe
     private TextView mStepDescription;
     private ImageButton mBtNavigateBack;
     private ImageButton mBtNavigateForward;
+    private long mPlayerPosition;
 
     private int mRecipeId;
     private int mStepId;
@@ -145,33 +146,42 @@ public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListe
     @Override
     public void onStart() {
         super.onStart();
-        if (Util.SDK_INT > 23) {
-            initializePlayer();
-        }
+
+        initializePlayer();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if ((Util.SDK_INT <= 23 || mPlayer == null)) {
-            initializePlayer();
+
+        if (mStep != null) {
+            Uri stepVideoUri = mStep.getVideoUri();
+
+            if (stepVideoUri.getScheme() != null) {
+                MediaSource mediaSource = buildMediaSource(stepVideoUri);
+
+                if (mPlayer != null) {
+                    mPlayer.prepare(mediaSource, true, false);
+                    mPlayer.seekTo(mPlayerPosition);
+                    mPlayer.setPlayWhenReady(true);
+                }
+            }
         }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (Util.SDK_INT <= 23) {
-            releasePlayer();
-        }
+
+        mPlayer.setPlayWhenReady(false);
+        mPlayerPosition = mPlayer.getCurrentPosition();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if (Util.SDK_INT > 23) {
-            releasePlayer();
-        }
+
+        releasePlayer();
     }
 
     private void loadStep(int recipeId, final int stepId) {
@@ -208,7 +218,9 @@ public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListe
                                 MediaSource mediaSource = buildMediaSource(stepVideoUri);
 
                                 if (mPlayer != null) {
+                                    mPlayerPosition = 0;
                                     mPlayer.prepare(mediaSource, true, false);
+                                    mPlayer.setPlayWhenReady(true);
                                 }
                             } else {
                                 // No video available. Default to broken image thumbnail
@@ -235,7 +247,6 @@ public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListe
             mPlayer = ExoPlayerFactory.newSimpleInstance(new DefaultRenderersFactory(getContext()),
                     new DefaultTrackSelector(adaptiveTrackSelectionFactory), new DefaultLoadControl());
             mPlayer.addListener(this);
-            mPlayer.setPlayWhenReady(false);
             mPlayer.seekTo(mCurrentWindow, mPlaybackPosition);
 
             // Tie media controller to session
@@ -294,7 +305,9 @@ public class RecipeStepFragment extends Fragment implements ExoPlayer.EventListe
                 break;
             case ExoPlayer.STATE_ENDED:
                 // Reset the player
-                mPlayer.seekTo(0);
+                mPlayerPosition = 0;
+                mPlayer.seekTo(mPlayerPosition);
+                mPlayer.setPlayWhenReady(false);
                 break;
             default:
                 // No-op

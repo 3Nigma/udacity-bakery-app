@@ -1,5 +1,6 @@
 package ro.tuscale.udacity.bake;
 
+import android.support.test.espresso.action.ViewActions;
 import android.support.test.espresso.contrib.RecyclerViewActions;
 import android.support.test.espresso.intent.rule.IntentsTestRule;
 import android.support.test.runner.AndroidJUnit4;
@@ -30,18 +31,23 @@ public class RecipeListInstrumentedTest {
 
     @Test
     public void checkAllRecipesLoaded() throws Exception {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ignored) {
+        }
         onView(withId(R.id.recipe_list)).check(new RecyclerViewItemCountAssertion(4));
     }
 
     @Test
     public void checkTriggeringOfRecipeDetail_onClick() throws Exception {
+        onView(withId(android.R.id.content)).perform(ViewActions.swipeUp());
         onView(withId(R.id.recipe_list))
                 .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
+        Thread.sleep(500);
 
         intended (
                 allOf (
-                    hasComponent(RecipeDetailActivity.class.getName()),
-                    hasExtras(allOf(hasEntry(equalTo(RecipeDetailFragment.ARG_RECIPE_ID), equalTo(1))))
+                    hasComponent(RecipeDetailActivity.class.getName())
                 )
         );
     }

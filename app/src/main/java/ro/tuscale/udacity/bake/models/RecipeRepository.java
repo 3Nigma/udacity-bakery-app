@@ -5,15 +5,12 @@ import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModel;
 import android.support.annotation.Nullable;
 
-import java.net.ConnectException;
 import java.util.List;
 
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.functions.Consumer;
-import io.reactivex.schedulers.Schedulers;
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -30,12 +27,15 @@ public class RecipeRepository extends ViewModel {
     private Retrofit mRetrofit;
 
     private MutableLiveData<List<Recipe>> mRecipes;
+    private OkHttpClient mHttpClient;
 
     public RecipeRepository() {
         MyService myService;
 
+        this.mHttpClient = new OkHttpClient();
         this.mRetrofit = new Retrofit.Builder()
                 .baseUrl(BuildConfig.BACKEND_URL)
+                .client(mHttpClient)
                 .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build();
@@ -56,6 +56,10 @@ public class RecipeRepository extends ViewModel {
                         // No-op. Maybe log later
                     }
                 });
+    }
+
+    public OkHttpClient getHttpClient() {
+        return mHttpClient;
     }
 
     public MutableLiveData<List<Recipe>> getAll() {
